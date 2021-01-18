@@ -1,15 +1,18 @@
 import pyaudio
-import matplotlib.pyplot as plt
 import numpy as np
 import cv2
+import datetime
+import wave
 
 RATE = 44100
 BUFFER = 1024
+FORMAT = pyaudio.paInt16
 
 p = pyaudio.PyAudio()
 
+
 stream = p.open(
-    format = pyaudio.paFloat32,
+    format = FORMAT,
     channels = 1,
     rate = RATE,
     input = True,
@@ -17,37 +20,56 @@ stream = p.open(
     frames_per_buffer = BUFFER
 )
 
-sp = np.zeros((513, 513), np.uint8)
+IS_PLAY_ONLY = True
 
-fig = plt.figure()
+signal_level_db = 10
+cutoff_freq = 200
+sp = np.zeros((513, cutoff_freq), np.uint8)
 
-def get_levels():
+recording = False
+max_recording_seconds = 3
+frames = []
+
+last_record = None
+last_record = datetime.datetime.now()
+
+
+def get_data():
+    data = stream.read(BUFFER)
+    return data
+
+def get_levels(data_in):
     try:
-        data = np.fft.rfft(np.fromstring(stream.read(BUFFER), dtype=np.float32))
+        data = np.fft.rfft(np.fromstring(data_in, dtype=np.int16))
     except IOError:
         pass
     data = np.log10(np.sqrt(np.real(data)**2+np.imag(data)**2) / BUFFER) * 10
     return data
 
 def translate_row(row):
-    def round_int(x):
-        if x == float("inf") or x == float("-inf"):
-            return 255 # or x or return whatever makes sense
-        return int(round(x))
     def translate_val(val):
-        val=(round_int(val + 100)/100)*255
-        return val
+        try:
+            if val is None:
+                val = 0
+            else:
+                val = val / 50 * 255
+            return int(val)
+        except:
+            print(val)
 
-    # row = np.apply_along_axis(translate_val, -1, row)
     vals = np.array([translate_val(p) for p in row], 'uint8')
     return vals
 
 while(True):
     # Capture frame-by-frame
-    _line = get_levels()
+    data = get_data()
+    _line = get_levels(data)
 
     # translate line to 0..255 range
     line = translate_row(_line)
+
+    #cutoff_frequency
+    line = line[:cutoff_freq]
 
     # roll spectrogram
     sp = np.vstack([sp, line])
@@ -55,14 +77,36 @@ while(True):
 
     frame = np.array(sp)
 
-    # max_value = round(frame.max(), 1)
-    # min_value = round(frame.min(), 1)
-    now_value = round(_line.max(), 1)
+    now_value = round(np.average(_line), 1)
+
+    #record
+    if now_value > signal_level_db:
+        last_record = datetime.datetime.now()
+
+        if recording is False:
+            recording = True
 
     frame = np.array(frame, 'uint8')
 
     #put texts
-    text = f'{now_value}dB'
+    recording_seconds = (datetime.datetime.now() - last_record).total_seconds()
+    text = f'{recording_seconds} seconds'
+
+    if recording:
+        frames.append(data)
+
+    if recording_seconds > max_recording_seconds:
+        if recording is True:
+            filename = datetime.datetime.now().strftime("%m%d%Y%H_%M_%S") + '.wav'
+            waveFile = wave.open(filename, 'wb')
+            waveFile.setnchannels(1)
+            waveFile.setsampwidth(p.get_sample_size(FORMAT))
+            waveFile.setframerate(RATE)
+            waveFile.writeframes(b''.join(frames))
+            waveFile.close()
+            recording = False
+
+    # text = f'{now_value}dB'
     frame = cv2.applyColorMap(frame, cv2.COLORMAP_JET)
     frame = cv2.putText(frame, text, (0, 25) , cv2.FONT_HERSHEY_SIMPLEX , 1, (0, 0, 0) , 2, cv2.LINE_AA)
 
