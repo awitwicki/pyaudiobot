@@ -1,9 +1,15 @@
+import os
 import pyaudio
 import numpy as np
 import cv2
 import datetime
 import wave
+from telegram.ext import Updater
 
+TELEGRAM_TOKEN = None
+TELEGRAM_CHAT_ID = None
+
+#region detail settings
 RATE = 44100
 BUFFER = 1024
 FORMAT = pyaudio.paInt16
@@ -20,8 +26,6 @@ stream = p.open(
     frames_per_buffer = BUFFER
 )
 
-IS_PLAY_ONLY = True
-
 signal_level_db = 10
 cutoff_freq = 200
 sp = np.zeros((513, cutoff_freq), np.uint8)
@@ -32,11 +36,56 @@ frames = []
 
 last_record = None
 last_record = datetime.datetime.now()
+#endregion
+
+
+#region first start
+# create folders
+if not os.path.exists('audio'):
+    os.makedirs('audio')
+    print(f"Created dir /audio")
+#endregion
+
+
+#region telegram
+def error(update, context):
+    """Log Errors caused by Updates."""
+    print('Update "%s" caused error "%s"', update, context.error)
+
+#setup telegram bot
+updater: Updater = Updater(TELEGRAM_TOKEN, use_context=True)
+
+# Get the dispatcher to register handlers
+dp = updater.dispatcher
+dp.add_error_handler(error)
+
+print(f"Starting bot")
+
+# Start the Bot
+updater.start_polling()
+
+def send_audio(file_path):
+    updater.bot.send_audio(chat_id=TELEGRAM_CHAT_ID, audio=open(file_path, 'rb'))
+
+#endregion
+
+#region audio
+def create_wav(frames):
+    filename = 'audio/' + datetime.datetime.now().strftime("%m%d%Y%H_%M_%S") + '.wav'
+    waveFile = wave.open(filename, 'wb')
+    waveFile.setnchannels(1)
+    waveFile.setsampwidth(p.get_sample_size(FORMAT))
+    waveFile.setframerate(RATE)
+    waveFile.writeframes(b''.join(frames))
+    waveFile.close()
+
+    return filename
 
 
 def get_data():
     data = stream.read(BUFFER)
     return data
+
 
 def get_levels(data_in):
     try:
@@ -45,6 +94,7 @@ def get_levels(data_in):
         pass
     data = np.log10(np.sqrt(np.real(data)**2+np.imag(data)**2) / BUFFER) * 10
     return data
+
 
 def translate_row(row):
     def translate_val(val):
@@ -59,6 +109,7 @@ def translate_row(row):
 
     vals = np.array([translate_val(p) for p in row], 'uint8')
     return vals
+
 
 while(True):
     # Capture frame-by-frame
@@ -97,14 +148,12 @@ while(True):
 
     if recording_seconds > max_recording_seconds:
         if recording is True:
-            filename = datetime.datetime.now().strftime("%m%d%Y%H_%M_%S") + '.wav'
-            waveFile = wave.open(filename, 'wb')
-            waveFile.setnchannels(1)
-            waveFile.setsampwidth(p.get_sample_size(FORMAT))
-            waveFile.setframerate(RATE)
-            waveFile.writeframes(b''.join(frames))
-            waveFile.close()
             recording = False
+            new_wav_file = create_wav(frames)
+            print(f'Saving file {new_wav_file}')
+
+            send_audio(new_wav_file)
+            print(f'Sending file {new_wav_file}')
 
     # text = f'{now_value}dB'
     frame = cv2.applyColorMap(frame, cv2.COLORMAP_JET)
@@ -115,6 +164,7 @@ while(True):
 
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
+#endregion
 
 # When everything done, release the capture
 cv2.destroyAllWindows()
