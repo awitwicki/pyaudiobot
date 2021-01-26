@@ -64,12 +64,24 @@ print(f"Starting bot")
 # Start the Bot
 updater.start_polling()
 
-def send_audio(file_path):
-    updater.bot.send_audio(chat_id=TELEGRAM_CHAT_ID, audio=open(file_path, 'rb'))
+def send_audio(file_path, duration):
+    updater.bot.send_voice(
+        chat_id = TELEGRAM_CHAT_ID,
+        voice = open(file_path, 'rb'),
+        duration = duration
+        )
 
 #endregion
 
 #region audio
+def try_delete(filename):
+    try:
+        print(f'removing {filename}')
+        os.remove(filename)
+    except Exception as e:
+        print(f'e')
+
+
 def create_wav(frames):
     filename = 'audio/' + datetime.datetime.now().strftime("%m%d%Y%H_%M_%S") + '.wav'
     waveFile = wave.open(filename, 'wb')
@@ -80,6 +92,23 @@ def create_wav(frames):
     waveFile.close()
 
     return filename
+
+
+def convert_to_ogg(file_path):
+    ogg_file_name = file_path.replace('.wav', '.ogg')
+    result = os.system(f"ffmpeg -i {file_path} -c:a libvorbis -q:a 4 {ogg_file_name}")
+    if result == 0:
+        try_delete(file_path)
+    else:
+        print("Error with convertiong file")
+        return file_path
+
+    return(ogg_file_name)
+
+
+def get_duration(file_path):
+    duration = int(os.popen(f'ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 {file_path}').read().split('.')[0])
+    return duration
 
 
 def get_data():
@@ -149,11 +178,14 @@ while(True):
     if recording_seconds > max_recording_seconds:
         if recording is True:
             recording = False
-            new_wav_file = create_wav(frames)
-            print(f'Saving file {new_wav_file}')
+            new_file = create_wav(frames)
+            print(f'Saving file {new_file}')
 
-            send_audio(new_wav_file)
-            print(f'Sending file {new_wav_file}')
+            new_file = convert_to_ogg(new_file)
+            duration = get_duration(new_file)
+
+            send_audio(new_file, duration)
+            print(f'Sending file {new_file}')
 
     # text = f'{now_value}dB'
     frame = cv2.applyColorMap(frame, cv2.COLORMAP_JET)
