@@ -127,14 +127,11 @@ def get_levels(data_in):
 
 def translate_row(row):
     def translate_val(val):
-        try:
-            if val is None:
-                val = 0
-            else:
-                val = val / 50 * 255
-            return int(val)
-        except:
-            print(val)
+        if val is None or val == float("-inf"):
+            val = 0
+        else:
+            val = val / 50 * 255
+        return int(val)
 
     vals = np.array([translate_val(p) for p in row], 'uint8')
     return vals
