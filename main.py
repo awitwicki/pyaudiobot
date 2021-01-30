@@ -9,6 +9,9 @@ from telegram.ext import Updater
 TELEGRAM_TOKEN = None
 TELEGRAM_CHAT_ID = None
 
+WINDOW_WIDTH = 500
+WINDOW_HEIGHT = 700
+
 #region detail settings
 RATE = 44100
 BUFFER = 1024
@@ -165,9 +168,7 @@ while(True):
 
     frame = np.array(frame, 'uint8')
 
-    #put texts
     recording_seconds = (datetime.datetime.now() - last_record).total_seconds()
-    text = f'{recording_seconds} seconds'
 
     if recording:
         frames.append(data)
@@ -184,9 +185,16 @@ while(True):
             send_audio(new_file, duration)
             print(f'Sending file {new_file}')
 
-    # text = f'{now_value}dB'
+    # image transformations
     frame = cv2.applyColorMap(frame, cv2.COLORMAP_JET)
-    frame = cv2.putText(frame, text, (0, 25) , cv2.FONT_HERSHEY_SIMPLEX , 1, (0, 0, 0) , 2, cv2.LINE_AA)
+    frame = cv2.resize(frame, (WINDOW_WIDTH, WINDOW_HEIGHT))
+
+    # put texts
+    text_time = f'{round(recording_seconds, 1)} seconds'
+    text_level = f'{now_value}dB/{signal_level_db}db'
+
+    frame = cv2.putText(frame, text_time, (0, 25) , cv2.FONT_HERSHEY_SIMPLEX , 1, (0, 0, 0) , 2, cv2.LINE_AA)
+    frame = cv2.putText(frame, text_level, (0, 65) , cv2.FONT_HERSHEY_SIMPLEX , 1, (0, 0, 0) , 2, cv2.LINE_AA)
 
     # Display the resulting frame
     cv2.imshow('spectre', frame)
