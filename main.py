@@ -34,6 +34,7 @@ cutoff_freq = 200
 sp = np.zeros((513, cutoff_freq), np.uint8)
 
 recording = False
+recording_started = None
 max_recording_seconds = 3
 frames = []
 
@@ -139,7 +140,9 @@ def translate_row(row):
     vals = np.array([translate_val(p) for p in row], 'uint8')
     return vals
 
+#endregion
 
+# main loop
 while(True):
     # Capture frame-by-frame
     data = get_data()
@@ -165,17 +168,21 @@ while(True):
 
         if recording is False:
             recording = True
+            recording_started = datetime.datetime.now()
 
     frame = np.array(frame, 'uint8')
 
-    recording_seconds = (datetime.datetime.now() - last_record).total_seconds()
+    not_recording_seconds = (datetime.datetime.now() - last_record).total_seconds()
 
     if recording:
         frames.append(data)
 
-    if recording_seconds > max_recording_seconds:
+    if not_recording_seconds > max_recording_seconds:
         if recording is True:
             recording = False
+            recording_started = None
+            last_record = datetime.datetime.now()
+
             new_file = create_wav(frames)
             print(f'Saving file {new_file}')
 
@@ -185,13 +192,22 @@ while(True):
             send_audio(new_file, duration)
             print(f'Sending file {new_file}')
 
+    # get recording status
+    if recording_started:
+        recording_seconds = (datetime.datetime.now() - recording_started).total_seconds()
+        recording_seconds = round(recording_seconds, 1)
+
     # image transformations
     frame = cv2.applyColorMap(frame, cv2.COLORMAP_JET)
     frame = cv2.resize(frame, (WINDOW_WIDTH, WINDOW_HEIGHT))
 
     # put texts
-    text_time = f'{round(recording_seconds, 1)} seconds'
-    text_level = f'{now_value}dB/{signal_level_db}db'
+    if recording_started:
+        text_time = f"Record {recording_seconds} seconds"
+    else:
+        text_time = f'Wait for signal {round(not_recording_seconds, 1)} seconds'
+
+    text_level = f'{now_value}dB/{signal_level_db}dB'
 
     frame = cv2.putText(frame, text_time, (0, 25) , cv2.FONT_HERSHEY_SIMPLEX , 1, (0, 0, 0) , 2, cv2.LINE_AA)
     frame = cv2.putText(frame, text_level, (0, 65) , cv2.FONT_HERSHEY_SIMPLEX , 1, (0, 0, 0) , 2, cv2.LINE_AA)
@@ -201,7 +217,6 @@ while(True):
 
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
-#endregion
 
 # When everything done, release the capture
 cv2.destroyAllWindows()
