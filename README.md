@@ -1,6 +1,8 @@
 # pyaudiobot
 Python audio recorder bot
 
+![Waterfall](.github/waterfall.jpg)
+
 ## Install
 
 1. ```pip install pipwin```
