@@ -27,7 +27,8 @@ stream = p.open(
     rate = RATE,
     input = True,
     output = False,
-    frames_per_buffer = BUFFER
+    frames_per_buffer = BUFFER,
+    input_device_index = 0
 )
 
 signal_level_db = 10
