@@ -4,6 +4,7 @@ import numpy as np
 import cv2
 import datetime
 import wave
+import threading
 from telegram.ext import Updater
 
 TELEGRAM_TOKEN = None
@@ -140,6 +141,20 @@ def translate_row(row):
     vals = np.array([translate_val(p) for p in row], 'uint8')
     return vals
 
+
+def handle_file_async(frames):
+    def handle_file(fr):
+        new_file = create_wav(fr)
+        print(f'Saving file {new_file}')
+
+        new_file = convert_to_ogg(new_file)
+        duration = get_duration(new_file)
+
+        send_audio(new_file, duration)
+        print(f'Sending file {new_file}')
+
+    processThread = threading.Thread(target=handle_file, args=[frames])  
+    processThread.start()
 #endregion
 
 # main loop
@@ -158,7 +173,6 @@ while(True):
     sp = np.vstack([sp, line])
     sp = np.delete(sp, (0), axis=0)
 
-    frame = np.array(sp)
 
     now_value = round(np.average(_line), 1)
 
@@ -170,6 +184,7 @@ while(True):
             recording = True
             recording_started = datetime.datetime.now()
 
+    frame = np.array(sp)
     frame = np.array(frame, 'uint8')
 
     not_recording_seconds = (datetime.datetime.now() - last_record).total_seconds()
@@ -183,14 +198,7 @@ while(True):
             recording_started = None
             last_record = datetime.datetime.now()
 
-            new_file = create_wav(frames)
-            print(f'Saving file {new_file}')
-
-            new_file = convert_to_ogg(new_file)
-            duration = get_duration(new_file)
-
-            send_audio(new_file, duration)
-            print(f'Sending file {new_file}')
+            handle_file_async(frames)
 
     # get recording status
     if recording_started:
