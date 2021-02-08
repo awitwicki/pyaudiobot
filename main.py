@@ -1,4 +1,5 @@
 import os
+from types import copy
 import pyaudio
 import numpy as np
 import cv2
@@ -154,7 +155,8 @@ def handle_file_async(frames):
         send_audio(new_file, duration)
         print(f'Sending file {new_file}')
 
-    processThread = threading.Thread(target=handle_file, args=[frames])  
+    copied_frames = list.copy(frames)
+    processThread = threading.Thread(target=handle_file, args=[copied_frames])
     processThread.start()
 #endregion
 
@@ -200,6 +202,7 @@ while(True):
             last_record = datetime.datetime.now()
 
             handle_file_async(frames)
+            frames = []
 
     # get recording status
     if recording_started:
