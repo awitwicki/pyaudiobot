@@ -1,5 +1,4 @@
 import os
-from types import copy
 import pyaudio
 import numpy as np
 import cv2
