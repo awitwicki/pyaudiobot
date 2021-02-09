@@ -6,9 +6,12 @@ import datetime
 import wave
 import threading
 from telegram.ext import Updater
+import config
 
-TELEGRAM_TOKEN = None
-TELEGRAM_CHAT_ID = None
+conf = config.config('config.ini', ['TELEGRAM_TOKEN', 'TELEGRAM_CHAT_ID'])
+
+TELEGRAM_TOKEN = conf.data['TELEGRAM_TOKEN']
+TELEGRAM_CHAT_ID = conf.data['TELEGRAM_CHAT_ID']
 
 WINDOW_WIDTH = 500
 WINDOW_HEIGHT = 700
