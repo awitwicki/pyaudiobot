@@ -13,8 +13,14 @@ conf = config.config('config.ini', ['TELEGRAM_TOKEN', 'TELEGRAM_CHAT_ID'])
 TELEGRAM_TOKEN = conf.data['TELEGRAM_TOKEN']
 TELEGRAM_CHAT_ID = conf.data['TELEGRAM_CHAT_ID']
 
+# program settings
 WINDOW_WIDTH = 500
 WINDOW_HEIGHT = 700
+
+signal_level_db = 10
+cutoff_freq = 200
+trigger_recording_seconds = 3
+min_recording_seconds = 3
 
 #region detail settings
 RATE = 44100
@@ -34,13 +40,11 @@ stream = p.open(
     input_device_index = 0
 )
 
-signal_level_db = 10
-cutoff_freq = 200
+
 sp = np.zeros((513, cutoff_freq), np.uint8)
 
 recording = False
 recording_started = None
-max_recording_seconds = 3
 frames = []
 
 last_record = None
@@ -197,19 +201,22 @@ while(True):
     if recording:
         frames.append(data)
 
-    if not_recording_seconds > max_recording_seconds:
+    # get recording status
+    if recording_started:
+        recording_seconds = (datetime.datetime.now() - recording_started).total_seconds()
+        recording_seconds = round(recording_seconds, 1)
+
+    if not_recording_seconds > trigger_recording_seconds:
         if recording is True:
             recording = False
             recording_started = None
             last_record = datetime.datetime.now()
 
-            handle_file_async(frames)
+            if recording_seconds >= min_recording_seconds:
+                handle_file_async(frames)
+
             frames = []
 
-    # get recording status
-    if recording_started:
-        recording_seconds = (datetime.datetime.now() - recording_started).total_seconds()
-        recording_seconds = round(recording_seconds, 1)
 
     # image transformations
     frame = cv2.applyColorMap(frame, cv2.COLORMAP_JET)
