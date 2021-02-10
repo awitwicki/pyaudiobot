@@ -11,16 +11,17 @@ import config
 conf = config.config('config.ini', ['TELEGRAM_TOKEN', 'TELEGRAM_CHAT_ID'])
 
 TELEGRAM_TOKEN = conf.data['TELEGRAM_TOKEN']
-TELEGRAM_CHAT_ID = conf.data['TELEGRAM_CHAT_ID']
+TELEGRAM_CHAT_ID: int = int(conf.data['TELEGRAM_CHAT_ID'])
 
 # program settings
 WINDOW_WIDTH = 500
 WINDOW_HEIGHT = 700
 
 signal_level_db = 10
-cutoff_freq = 200
 trigger_recording_seconds = 3
 min_recording_seconds = 3
+
+cutoff_freq = 200
 
 #region detail settings
 RATE = 44100

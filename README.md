@@ -5,19 +5,26 @@ Python audio recorder bot
 
 ## Install
 
-1. ```pip install pipwin```
+1. ```pip3 install pipwin```
 
 2. ```pipwin install pyaudio```
 
-3. ```pip install -r requirements.txt```
+3. ```pip3 install -r requirements.txt```
 
 4. Install **ffmpeg** and **ffprobe**
-    * [windows](https://ffmpeg.zeranoe.com/builds/) install and place `ffmpeg.exe`, `ffprobe.exe` in **PATH**
+    * [windows](https://ffmpeg.org/download.html#build-windows) install and move `ffmpeg.exe`, `ffprobe.exe` in **PATH** or in this project folder
     * [linux](https://www.tecmint.com/install-ffmpeg-in-linux/) (just install, it will work)
 
+5. Run and type your `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` in first start dialog
 
-## Setup
+6. **Optional** You can edit program settings on lines `17..22` as you want
 
-Place your Telegram bot token in `TELEGRAM_TOKEN` and chatId You need to use in `TELEGRAM_CHAT_ID`
+    ``` python
+    # program settings
+    WINDOW_WIDTH = 500
+    WINDOW_HEIGHT = 700
 
-Run
+    signal_level_db = 10
+    trigger_recording_seconds = 3
+    min_recording_seconds = 3
+    ```
