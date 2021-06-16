@@ -110,7 +110,7 @@ def create_wav(frames):
 
 def convert_to_ogg(file_path):
     ogg_file_name = file_path.replace('.wav', '.ogg')
-    result = os.system(f"ffmpeg -i {file_path} -c:a libvorbis -q:a 4 {ogg_file_name}")
+    result = os.system(f"ffmpeg -i {file_path} -c:a libopus -b:a 96K {ogg_file_name}")
     if result == 0:
         try_delete(file_path)
     else:
